@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#0f0f0f" />
+  <meta name="description" content="A simple day counter app — count days since or until any event." />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Days" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <title>Days</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --surface2: #222222;
+      --border: rgba(255,255,255,0.08);
+      --border-hover: rgba(255,255,255,0.16);
+      --text: #f0ede8;
+      --text-muted: rgba(240,237,232,0.45);
+      --text-dim: rgba(240,237,232,0.25);
+      --accent: #d4f0a0;
+      --accent-text: #0f1a04;
+      --danger: #ff6b6b;
+      --radius: 14px;
+      --radius-sm: 8px;
+    }
+
+    html { height: 100%; }
+
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100%;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+
+    .shell {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 6rem;
+    }
+
+    header {
+      margin-bottom: 2.5rem;
+    }
+
+    .wordmark {
+      font-family: 'DM Mono', monospace;
+      font-size: 11px;
+      font-weight: 500;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+    }
+
+    .tagline {
+      font-size: 13px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* COUNTER CARDS */
+    #counters-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 1.5rem;
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 3rem 1rem;
+      color: var(--text-dim);
+      font-size: 14px;
+      line-height: 1.7;
+      border: 0.5px dashed var(--border-hover);
+      border-radius: var(--radius);
+    }
+
+    .counter-card {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.125rem;
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.2s, background 0.2s;
+      animation: slideIn 0.25s ease;
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .counter-card:hover { border-color: var(--border-hover); background: var(--surface2); }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .counter-info { min-width: 0; }
+
+    .counter-name {
+      font-size: 15px;
+      font-weight: 500;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .counter-meta {
+      font-size: 11px;
+      color: var(--text-muted);
+      margin-top: 2px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .counter-days {
+      text-align: right;
+      flex-shrink: 0;
+    }
+
+    .days-number {
+      font-family: 'DM Mono', monospace;
+      font-size: 26px;
+      font-weight: 500;
+      line-height: 1;
+      color: var(--text);
+    }
+
+    .days-label {
+      font-size: 10px;
+      color: var(--text-muted);
+      text-align: right;
+      margin-top: 3px;
+      letter-spacing: 0.04em;
+    }
+
+    .delete-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      width: 28px;
+      height: 28px;
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: color 0.15s, background 0.15s;
+      flex-shrink: 0;
+    }
+
+    .delete-btn:hover { color: var(--danger); background: rgba(255,107,107,0.1); }
+
+    .delete-btn svg { width: 14px; height: 14px; }
+
+    /* ADD FORM */
+    .add-section {
+      background: var(--surface);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.25rem;
+    }
+
+    .section-label {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 10px;
+      font-family: 'DM Mono', monospace;
+    }
+
+    .field-group { margin-bottom: 14px; }
+
+    input[type="text"],
+    input[type="date"] {
+      width: 100%;
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      padding: 9px 12px;
+      outline: none;
+      transition: border-color 0.15s;
+      -webkit-appearance: none;
+    }
+
+    input[type="text"]::placeholder { color: var(--text-dim); }
+
+    input[type="text"]:focus,
+    input[type="date"]:focus { border-color: var(--border-hover); }
+
+    input[type="date"]::-webkit-calendar-picker-indicator {
+      filter: invert(0.6);
+      cursor: pointer;
+    }
+
+    .type-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px;
+      margin-bottom: 14px;
+    }
+
+    .type-btn {
+      background: var(--surface2);
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      color: var(--text-muted);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 13px;
+      font-weight: 400;
+      padding: 8px;
+      cursor: pointer;
+      transition: all 0.15s;
+      text-align: center;
+    }
+
+    .type-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: var(--accent-text);
+      font-weight: 500;
+    }
+
+    .color-row {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .color-swatch {
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      cursor: pointer;
+      border: 2px solid transparent;
+      transition: transform 0.15s, border-color 0.15s;
+    }
+
+    .color-swatch:hover { transform: scale(1.15); }
+    .color-swatch.active { border-color: var(--text); transform: scale(1.15); }
+
+    .submit-btn {
+      width: 100%;
+      background: var(--accent);
+      border: none;
+      border-radius: var(--radius-sm);
+      color: var(--accent-text);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 10px;
+      cursor: pointer;
+      transition: opacity 0.15s, transform 0.1s;
+    }
+
+    .submit-btn:hover { opacity: 0.9; }
+    .submit-btn:active { transform: scale(0.99); }
+
+    /* TODAY BADGE */
+    .today-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: var(--accent-text);
+      font-size: 10px;
+      font-family: 'DM Mono', monospace;
+      font-weight: 500;
+      padding: 2px 7px;
+      border-radius: 20px;
+      letter-spacing: 0.05em;
+    }
+
+    /* INSTALL HINT */
+    #install-hint {
+      margin-top: 1.5rem;
+      padding: 10px 14px;
+      border: 0.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 12px;
+      color: var(--text-muted);
+      display: none;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    #install-hint button {
+      background: none;
+      border: 0.5px solid var(--border-hover);
+      border-radius: 6px;
+      color: var(--text);
+      font-size: 12px;
+      padding: 4px 10px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+  </style>
+</head>
+<body>
+<div class="shell">
+  <header>
+    <div class="wordmark">Days</div>
+    <div class="tagline">count what matters</div>
+  </header>
+
+  <div id="counters-list"></div>
+
+  <div class="add-section">
+    <div class="section-label">New counter</div>
+
+    <div class="field-group">
+      <input type="text" id="name-input" placeholder="Label — e.g. Quit smoking" maxlength="40" />
+    </div>
+
+    <div class="field-group">
+      <input type="date" id="date-input" />
+    </div>
+
+    <div class="section-label">Direction</div>
+    <div class="type-row">
+      <button class="type-btn active" id="since-btn" onclick="setType('since')">Days since</button>
+      <button class="type-btn" id="until-btn" onclick="setType('until')">Days until</button>
+    </div>
+
+    <div class="section-label">Colour</div>
+    <div class="color-row" id="color-row"></div>
+
+    <button class="submit-btn" onclick="addCounter()">Add counter</button>
+  </div>
+
+  <div id="install-hint">
+    <span>Install this app to your home screen for quick access</span>
+    <button id="install-btn">Install</button>
+  </div>
+</div>
+
+<script>
+  const COLORS = [
+    '#d4f0a0', '#7ecfff', '#ff9f7e', '#ffcf72',
+    '#c4a8ff', '#ff8fab', '#72e4c4', '#ffffff'
+  ];
+
+  let selectedColor = COLORS[0];
+  let selectedType = 'since';
+  let deferredInstallPrompt = null;
+
+  window.addEventListener('beforeinstallprompt', e => {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    document.getElementById('install-hint').style.display = 'flex';
+  });
+
+  document.getElementById('install-btn').addEventListener('click', async () => {
+    if (!deferredInstallPrompt) return;
+    deferredInstallPrompt.prompt();
+    const { outcome } = await deferredInstallPrompt.userChoice;
+    if (outcome === 'accepted') document.getElementById('install-hint').style.display = 'none';
+    deferredInstallPrompt = null;
+  });
+
+  function setType(t) {
+    selectedType = t;
+    document.getElementById('since-btn').className = 'type-btn' + (t === 'since' ? ' active' : '');
+    document.getElementById('until-btn').className = 'type-btn' + (t === 'until' ? ' active' : '');
+  }
+
+  function renderColors() {
+    document.getElementById('color-row').innerHTML = COLORS.map(c =>
+      `<div class="color-swatch${c === selectedColor ? ' active' : ''}"
+            style="background:${c}"
+            onclick="pickColor('${c}')"></div>`
+    ).join('');
+  }
+
+  function pickColor(c) { selectedColor = c; renderColors(); }
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem('day_counters') || '[]'); } catch { return []; }
+  }
+
+  function save(list) { localStorage.setItem('day_counters', JSON.stringify(list)); }
+
+  function calcDays(dateStr, type) {
+    const today = new Date(); today.setHours(0,0,0,0);
+    const target = new Date(dateStr + 'T00:00:00'); target.setHours(0,0,0,0);
+    const diff = Math.round((today - target) / 86400000);
+    return type === 'since' ? diff : -diff;
+  }
+
+  function render() {
+    const list = load();
+    const el = document.getElementById('counters-list');
+    if (!list.length) {
+      el.innerHTML = `<div class="empty-state">No counters yet.<br>Add one below to start tracking.</div>`;
+      return;
+    }
+    el.innerHTML = list.map((c, i) => {
+      const days = calcDays(c.date, c.type);
+      const absDays = Math.abs(days);
+      const isToday = days === 0;
+      const label = isToday ? '' : (c.type === 'since'
+        ? (absDays === 1 ? 'day ago' : 'days ago')
+        : (absDays === 1 ? 'day left' : 'days left'));
+      const dateFormatted = new Date(c.date + 'T00:00:00')
+        .toLocaleDateString('en-GB', { day:'numeric', month:'short', year:'numeric' });
+
+      return `
+        <div class="counter-card">
+          <div class="dot" style="background:${c.color}"></div>
+          <div class="counter-info">
+            <div class="counter-name">${escHtml(c.name)}</div>
+            <div class="counter-meta">${c.type === 'since' ? 'since' : 'until'} ${dateFormatted}</div>
+          </div>
+          <div class="counter-days">
+            ${isToday
+              ? `<span class="today-badge">today</span>`
+              : `<div class="days-number">${absDays}</div><div class="days-label">${label}</div>`
+            }
+          </div>
+          <button class="delete-btn" onclick="deleteCounter(${i})" title="Delete">
+            <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+              <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
+            </svg>
+          </button>
+        </div>`;
+    }).join('');
+  }
+
+  function escHtml(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function addCounter() {
+    const name = document.getElementById('name-input').value.trim();
+    const date = document.getElementById('date-input').value;
+    if (!name) { alert('Please enter a label.'); return; }
+    if (!date) { alert('Please pick a date.'); return; }
+    const list = load();
+    list.push({ name, date, type: selectedType, color: selectedColor });
+    save(list);
+    document.getElementById('name-input').value = '';
+    render();
+  }
+
+  function deleteCounter(i) {
+    const list = load();
+    list.splice(i, 1);
+    save(list);
+    render();
+  }
+
+  document.getElementById('date-input').valueAsDate = new Date();
+
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').catch(() => {});
+  }
+
+  renderColors();
+  render();
+</script>
+</body>
+</html>
